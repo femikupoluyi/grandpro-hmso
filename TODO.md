@@ -29,13 +29,13 @@
 
 ## 📋 Remaining Steps
 
-### Step 4: Digital Sourcing & Partner Onboarding Module (Backend)
-- [ ] Create API endpoints for hospital owner registration
-- [ ] Implement document upload with secure storage
-- [ ] Build automated evaluation scoring logic
-- [ ] Create contract generation templates
-- [ ] Integrate digital signature functionality
-- [ ] Extend database schema with onboarding tables
+### Step 4: Digital Sourcing & Partner Onboarding Module (Backend) ✅
+- [x] Create API endpoints for hospital owner registration
+- [x] Implement document upload with secure storage
+- [x] Build automated evaluation scoring logic
+- [x] Create contract generation templates
+- [x] Integrate digital signature functionality
+- [x] Extend database schema with onboarding tables
 
 ### Step 5: Digital Sourcing & Partner Onboarding Module (Frontend)
 - [ ] Build owner application submission page
