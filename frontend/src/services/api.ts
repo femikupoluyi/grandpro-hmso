@@ -118,21 +118,25 @@ export const apiService = {
   // Onboarding endpoints
   onboarding: {
     submitApplication: (data: any) =>
-      api.post('/onboarding/applications', data),
+      api.post('/onboarding/applications/submit', data),
     getApplications: (params?: any) =>
       api.get('/onboarding/applications', { params }),
     getApplicationById: (id: string) =>
       api.get(`/onboarding/applications/${id}`),
     updateApplicationStatus: (id: string, status: string) =>
-      api.put(`/onboarding/applications/${id}/status`, { status }),
+      api.patch(`/onboarding/applications/${id}/status`, { status }),
     uploadDocument: (applicationId: string, formData: FormData) =>
       api.post(`/onboarding/applications/${applicationId}/documents`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       }),
-    generateContract: (applicationId: string) =>
-      api.post(`/onboarding/applications/${applicationId}/contract`),
-    signContract: (applicationId: string, signature: any) =>
-      api.post(`/onboarding/applications/${applicationId}/sign`, signature),
+    evaluateApplication: (data: any) =>
+      api.post('/onboarding/applications/evaluate', data),
+    generateContract: (data: any) =>
+      api.post('/onboarding/contracts/generate', data),
+    signContract: (data: any) =>
+      api.post('/onboarding/contracts/sign', data),
+    getOnboardingProgress: (applicationId: string) =>
+      api.get(`/onboarding/applications/${applicationId}/progress`),
   },
 
   // Patient endpoints
