@@ -1,0 +1,10 @@
+node_modules
+# Keep environment variables out of version control
+.env
+.env.local
+dist/
+uploads/*
+!uploads/.gitkeep
+test-verification.js
+src/server.js
+package-lock.json
