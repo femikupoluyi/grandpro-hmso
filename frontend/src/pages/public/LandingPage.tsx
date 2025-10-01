@@ -1,6 +1,7 @@
 import { FC } from 'react';
 import { Link } from 'react-router-dom';
 import { config } from '../../config';
+import HealthCheck from '../../components/HealthCheck';
 
 const LandingPage: FC = () => {
   return (
@@ -16,6 +17,10 @@ const LandingPage: FC = () => {
               A comprehensive, modular, and scalable hospital management platform
               transforming healthcare delivery across Nigeria 🇳🇬
             </p>
+            {/* Health Check Component */}
+            <div className="mb-6">
+              <HealthCheck />
+            </div>
             <div className="space-x-4">
               <Link
                 to="/auth/register"

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Frontend-Backend Communication Test</title>
+</head>
+<body>
+    <h1>Testing Frontend to Backend Communication</h1>
+    <button onclick="testHealthCheck()">Test Health Check</button>
+    <button onclick="testSystemInfo()">Test System Info</button>
+    <div id="result"></div>
+    
+    <script>
+        async function testHealthCheck() {
+            try {
+                const response = await fetch('https://backend-api-morphvm-wz7xxc7v.http.cloud.morph.so/health');
+                const data = await response.json();
+                document.getElementById('result').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                console.log('Health check successful:', data);
+            } catch (error) {
+                document.getElementById('result').innerHTML = 'Error: ' + error.message;
+                console.error('Health check failed:', error);
+            }
+        }
+        
+        async function testSystemInfo() {
+            try {
+                const response = await fetch('https://backend-api-morphvm-wz7xxc7v.http.cloud.morph.so/api/system/info');
+                const data = await response.json();
+                document.getElementById('result').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                console.log('System info successful:', data);
+            } catch (error) {
+                document.getElementById('result').innerHTML = 'Error: ' + error.message;
+                console.error('System info failed:', error);
+            }
+        }
+        
+        // Auto-test on load
+        window.onload = () => {
+            testHealthCheck();
+        };
+    </script>
+</body>
+</html>
