@@ -37,12 +37,12 @@
 - [x] Integrate digital signature functionality
 - [x] Extend database schema with onboarding tables
 
-### Step 5: Digital Sourcing & Partner Onboarding Module (Frontend)
-- [ ] Build owner application submission page
-- [ ] Create document upload UI
-- [ ] Develop dashboard for application progress
-- [ ] Implement contract review/signature view
-- [ ] Connect frontend to backend APIs
+### Step 5: Digital Sourcing & Partner Onboarding Module (Frontend) ✅
+- [x] Build owner application submission page
+- [x] Create document upload UI
+- [x] Develop dashboard for application progress
+- [x] Implement contract review/signature view
+- [x] Connect frontend to backend APIs
 
 ### Step 6: CRM & Relationship Management (Backend)
 - [ ] Add Owner CRM APIs (contracts, payouts, communication logs)
