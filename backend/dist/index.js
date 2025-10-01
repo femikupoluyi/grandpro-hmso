@@ -44,11 +44,17 @@ app.use((0, helmet_1.default)({
 // CORS configuration
 const corsOptions = {
     origin: function (origin, callback) {
-        const allowedOrigins = process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000'];
+        const allowedOrigins = [
+            'http://localhost:3000',
+            'http://localhost:5173',
+            'https://hmso-frontend-morphvm-wz7xxc7v.http.cloud.morph.so'
+        ];
+        // Allow requests with no origin (like mobile apps or Postman)
         if (!origin || allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
         }
         else {
+            console.log('CORS rejected origin:', origin);
             callback(new Error('Not allowed by CORS'));
         }
     },
