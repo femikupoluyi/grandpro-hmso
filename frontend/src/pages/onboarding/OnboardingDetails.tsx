@@ -146,7 +146,7 @@ const OnboardingDetails: FC = () => {
         signatoryEmail: application.contactEmail,
       };
 
-      await apiService.onboarding.signContract(signatureData);
+      await apiService.onboarding.signContract(application.hospital.contracts[0].id, signatureData);
       await loadApplicationData(); // Refresh data
       alert('Contract signed successfully!');
       setShowContractModal(false);

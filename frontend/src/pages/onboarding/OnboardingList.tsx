@@ -1,285 +1,434 @@
-import { FC, useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Card, CardHeader, CardBody, Button, Table, Select } from '../../components/ui';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Card, Button, Input } from '../../components/ui';
+import { Table } from '../../components/Table';
+import { SelectSimple as Select } from '../../components/SelectSimple';
+import { Badge } from '../../components/Badge';
+import { Pagination } from '../../components/Pagination';
+import { useApi } from '../../hooks/useApi';
 import { apiService } from '../../services/api';
-import { formatDate } from '../../utils/formatters';
-import { useApi } from '../../hooks';
+import { 
+  MagnifyingGlassIcon,
+  FunnelIcon,
+  ArrowDownTrayIcon,
+  EyeIcon,
+  CheckCircleIcon,
+  XCircleIcon
+} from '@heroicons/react/24/outline';
 
 interface Application {
   id: string;
   applicationNumber: string;
   hospitalName: string;
-  contactPerson: string;
-  contactEmail: string;
-  contactPhone: string;
-  proposedLocation: any;
-  proposedBedCapacity: number;
+  state: string;
+  city: string;
+  ownerName: string;
+  ownerEmail: string;
   status: string;
   submittedAt: string;
-  evaluationScore?: number;
-  documents?: any[];
+  evaluationScores: Array<{ totalScore: number }>;
+  progress: {
+    currentStage: string;
+    overallProgress: number;
+  };
+  _count: {
+    documents: number;
+    checklists: number;
+  };
 }
 
-const OnboardingList: FC = () => {
+const STATUS_COLORS = {
+  DRAFT: 'gray',
+  SUBMITTED: 'blue',
+  UNDER_REVIEW: 'yellow',
+  APPROVED: 'green',
+  REJECTED: 'red',
+  WITHDRAWN: 'gray'
+};
+
+const NIGERIAN_STATES = [
+  'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue',
+  'Borno', 'Cross River', 'Delta', 'Ebonyi', 'Edo', 'Ekiti', 'Enugu',
+  'FCT', 'Gombe', 'Imo', 'Jigawa', 'Kaduna', 'Kano', 'Katsina', 'Kebbi',
+  'Kogi', 'Kwara', 'Lagos', 'Nasarawa', 'Niger', 'Ogun', 'Ondo', 'Osun',
+  'Oyo', 'Plateau', 'Rivers', 'Sokoto', 'Taraba', 'Yobe', 'Zamfara'
+];
+
+export default function OnboardingList() {
   const navigate = useNavigate();
   const [applications, setApplications] = useState<Application[]>([]);
-  const [statusFilter, setStatusFilter] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  
-  const { loading, execute } = useApi(apiService.onboarding.getApplications);
+  const [filters, setFilters] = useState({
+    search: '',
+    status: '',
+    state: '',
+    page: 1,
+    limit: 10
+  });
+  const [pagination, setPagination] = useState({
+    total: 0,
+    pages: 0
+  });
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedApplications, setSelectedApplications] = useState<string[]>([]);
+
+  const { execute: fetchApplications, loading } = useApi(
+    apiService.onboarding.getApplications
+  );
+
+  const { execute: updateStatus } = useApi(
+    apiService.onboarding.updateApplicationStatus
+  );
+
+  const { execute: exportApplications } = useApi(
+    apiService.onboarding.exportApplications
+  );
 
   useEffect(() => {
-    fetchApplications();
-  }, [statusFilter, currentPage]);
+    loadApplications();
+  }, [filters]);
 
-  const fetchApplications = async () => {
-    const params: any = {
-      page: currentPage,
-      limit: 10,
-    };
-    
-    if (statusFilter) {
-      params.status = statusFilter;
-    }
-
-    const response = await execute(params);
-    if (response) {
-      setApplications(response.applications || []);
-      setTotalPages(response.pagination?.pages || 1);
+  const loadApplications = async () => {
+    const result = await fetchApplications(filters);
+    if (result) {
+      setApplications(result.data);
+      setPagination(result.pagination);
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusColors: Record<string, string> = {
-      SUBMITTED: 'bg-blue-100 text-blue-700',
-      UNDER_REVIEW: 'bg-yellow-100 text-yellow-700',
-      DOCUMENTS_REQUESTED: 'bg-orange-100 text-orange-700',
-      APPROVED: 'bg-green-100 text-green-700',
-      REJECTED: 'bg-red-100 text-red-700',
-      WITHDRAWN: 'bg-gray-100 text-gray-700',
-    };
-
-    return (
-      <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${statusColors[status] || 'bg-gray-100 text-gray-700'}`}>
-        {status.replace(/_/g, ' ')}
-      </span>
-    );
+  const handleFilterChange = (key: string, value: any) => {
+    setFilters(prev => ({
+      ...prev,
+      [key]: value,
+      page: 1 // Reset to first page when filters change
+    }));
   };
 
-  const getScoreBadge = (score?: number) => {
-    if (!score) return null;
-    
-    let colorClass = 'bg-gray-100 text-gray-700';
-    if (score >= 70) colorClass = 'bg-green-100 text-green-700';
-    else if (score >= 50) colorClass = 'bg-yellow-100 text-yellow-700';
-    else colorClass = 'bg-red-100 text-red-700';
+  const handleStatusUpdate = async (id: string, newStatus: string, reason?: string) => {
+    const result = await updateStatus(id, { status: newStatus, reason });
+    if (result) {
+      await loadApplications();
+    }
+  };
 
-    return (
-      <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${colorClass}`}>
-        {score}/100
-      </span>
+  const handleExport = async (format: 'csv' | 'excel' | 'pdf') => {
+    await exportApplications(format, filters);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedApplications.length === applications.length) {
+      setSelectedApplications([]);
+    } else {
+      setSelectedApplications(applications.map(app => app.id));
+    }
+  };
+
+  const handleSelectApplication = (id: string) => {
+    setSelectedApplications(prev =>
+      prev.includes(id)
+        ? prev.filter(appId => appId !== id)
+        : [...prev, id]
     );
   };
 
   const columns = [
     {
+      key: 'select',
+      header: (
+        <input
+          type="checkbox"
+          checked={selectedApplications.length === applications.length && applications.length > 0}
+          onChange={handleSelectAll}
+          className="rounded"
+        />
+      ),
+      render: (app: Application) => (
+        <input
+          type="checkbox"
+          checked={selectedApplications.includes(app.id)}
+          onChange={() => handleSelectApplication(app.id)}
+          className="rounded"
+        />
+      )
+    },
+    {
       key: 'applicationNumber',
       header: 'Application #',
-      render: (item: Application) => (
-        <span className="font-mono text-sm">{item.applicationNumber}</span>
-      ),
+      render: (app: Application) => (
+        <span className="font-mono text-sm">{app.applicationNumber}</span>
+      )
     },
     {
       key: 'hospitalName',
-      header: 'Hospital Name',
-      render: (item: Application) => (
+      header: 'Hospital',
+      render: (app: Application) => (
         <div>
-          <div className="font-semibold">{item.hospitalName}</div>
-          <div className="text-xs text-gray-500">{item.contactPerson}</div>
+          <p className="font-medium">{app.hospitalName}</p>
+          <p className="text-xs text-gray-500">{app.city}, {app.state}</p>
         </div>
-      ),
+      )
     },
     {
-      key: 'location',
-      header: 'Location',
-      render: (item: Application) => (
-        <div className="text-sm">
-          <div>{item.proposedLocation?.city}</div>
-          <div className="text-xs text-gray-500">{item.proposedLocation?.state}</div>
+      key: 'owner',
+      header: 'Owner',
+      render: (app: Application) => (
+        <div>
+          <p className="text-sm">{app.ownerName}</p>
+          <p className="text-xs text-gray-500">{app.ownerEmail}</p>
         </div>
-      ),
-    },
-    {
-      key: 'bedCapacity',
-      header: 'Beds',
-      render: (item: Application) => (
-        <span className="text-sm">{item.proposedBedCapacity}</span>
-      ),
-    },
-    {
-      key: 'submittedAt',
-      header: 'Submitted',
-      render: (item: Application) => (
-        <span className="text-sm">{formatDate(item.submittedAt)}</span>
-      ),
-    },
-    {
-      key: 'evaluationScore',
-      header: 'Score',
-      render: (item: Application) => getScoreBadge(item.evaluationScore),
+      )
     },
     {
       key: 'status',
       header: 'Status',
-      render: (item: Application) => getStatusBadge(item.status),
+      render: (app: Application) => (
+        <Badge color={STATUS_COLORS[app.status as keyof typeof STATUS_COLORS] as any}>
+          {app.status}
+        </Badge>
+      )
+    },
+    {
+      key: 'progress',
+      header: 'Progress',
+      render: (app: Application) => (
+        <div className="w-20">
+          <div className="flex items-center">
+            <div className="flex-1 bg-gray-200 rounded-full h-2">
+              <div
+                className="bg-primary-600 h-2 rounded-full"
+                style={{ width: `${app.progress.overallProgress}%` }}
+              />
+            </div>
+            <span className="ml-2 text-xs text-gray-600">
+              {app.progress.overallProgress}%
+            </span>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'evaluation',
+      header: 'Score',
+      render: (app: Application) => {
+        const score = app.evaluationScores[0]?.totalScore;
+        if (!score) return <span className="text-gray-400">-</span>;
+        
+        const color = score >= 70 ? 'text-green-600' : score >= 50 ? 'text-yellow-600' : 'text-red-600';
+        return <span className={`font-semibold ${color}`}>{score.toFixed(1)}</span>;
+      }
+    },
+    {
+      key: 'documents',
+      header: 'Docs',
+      render: (app: Application) => (
+        <span className="text-sm">{app._count.documents}</span>
+      )
+    },
+    {
+      key: 'submitted',
+      header: 'Submitted',
+      render: (app: Application) => (
+        <span className="text-sm">
+          {new Date(app.submittedAt).toLocaleDateString('en-NG')}
+        </span>
+      )
     },
     {
       key: 'actions',
       header: 'Actions',
-      render: (item: Application) => (
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => navigate(`/dashboard/onboarding/${item.id}`)}
-        >
-          View Details
-        </Button>
-      ),
-    },
+      render: (app: Application) => (
+        <div className="flex items-center space-x-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => navigate(`/onboarding/applications/${app.id}`)}
+          >
+            <EyeIcon className="w-4 h-4" />
+          </Button>
+          {app.status === 'SUBMITTED' && (
+            <>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => handleStatusUpdate(app.id, 'APPROVED')}
+                className="text-green-600 hover:text-green-700"
+              >
+                <CheckCircleIcon className="w-4 h-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  const reason = prompt('Rejection reason:');
+                  if (reason) handleStatusUpdate(app.id, 'REJECTED', reason);
+                }}
+                className="text-red-600 hover:text-red-700"
+              >
+                <XCircleIcon className="w-4 h-4" />
+              </Button>
+            </>
+          )}
+        </div>
+      )
+    }
   ];
-
-  const statusOptions = [
-    { value: '', label: 'All Status' },
-    { value: 'SUBMITTED', label: 'Submitted' },
-    { value: 'UNDER_REVIEW', label: 'Under Review' },
-    { value: 'DOCUMENTS_REQUESTED', label: 'Documents Requested' },
-    { value: 'APPROVED', label: 'Approved' },
-    { value: 'REJECTED', label: 'Rejected' },
-    { value: 'WITHDRAWN', label: 'Withdrawn' },
-  ];
-
-  const stats = {
-    total: applications.length,
-    submitted: applications.filter(a => a.status === 'SUBMITTED').length,
-    underReview: applications.filter(a => a.status === 'UNDER_REVIEW').length,
-    approved: applications.filter(a => a.status === 'APPROVED').length,
-    rejected: applications.filter(a => a.status === 'REJECTED').length,
-  };
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Hospital Onboarding</h1>
-          <p className="text-gray-600 mt-1">Manage hospital applications and onboarding process</p>
+    <div className="p-6">
+      {/* Header */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Hospital Onboarding Applications</h1>
+            <p className="text-gray-600 mt-1">Manage and review hospital applications</p>
+          </div>
+          <div className="flex items-center space-x-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <FunnelIcon className="w-4 h-4 mr-2" />
+              Filters
+            </Button>
+            <div className="relative group">
+              <Button variant="outline">
+                <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
+                Export
+              </Button>
+              <div className="absolute right-0 mt-2 w-48 bg-white border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+                <button
+                  onClick={() => handleExport('csv')}
+                  className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                >
+                  Export as CSV
+                </button>
+                <button
+                  onClick={() => handleExport('excel')}
+                  className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                >
+                  Export as Excel
+                </button>
+                <button
+                  onClick={() => handleExport('pdf')}
+                  className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                >
+                  Export as PDF
+                </button>
+              </div>
+            </div>
+            <Button
+              onClick={() => navigate('/onboarding/apply')}
+              className="bg-primary-600 hover:bg-primary-700"
+            >
+              New Application
+            </Button>
+          </div>
         </div>
-        <Button
-          variant="primary"
-          onClick={() => navigate('/dashboard/onboarding/new')}
-        >
-          New Application
-        </Button>
-      </div>
-
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-        <Card padding="sm">
-          <CardBody>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
-              <div className="text-sm text-gray-600">Total Applications</div>
-            </div>
-          </CardBody>
-        </Card>
-        <Card padding="sm">
-          <CardBody>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{stats.submitted}</div>
-              <div className="text-sm text-gray-600">Submitted</div>
-            </div>
-          </CardBody>
-        </Card>
-        <Card padding="sm">
-          <CardBody>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-yellow-600">{stats.underReview}</div>
-              <div className="text-sm text-gray-600">Under Review</div>
-            </div>
-          </CardBody>
-        </Card>
-        <Card padding="sm">
-          <CardBody>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{stats.approved}</div>
-              <div className="text-sm text-gray-600">Approved</div>
-            </div>
-          </CardBody>
-        </Card>
-        <Card padding="sm">
-          <CardBody>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-red-600">{stats.rejected}</div>
-              <div className="text-sm text-gray-600">Rejected</div>
-            </div>
-          </CardBody>
-        </Card>
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Applications</h2>
-            <div className="flex gap-4">
+      {showFilters && (
+        <Card className="mb-6">
+          <div className="p-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="relative">
+                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  placeholder="Search by name, number..."
+                  value={filters.search}
+                  onChange={(e) => handleFilterChange('search', e.target.value)}
+                  className="pl-10"
+                />
+              </div>
               <Select
-                options={statusOptions}
-                value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value);
-                  setCurrentPage(1);
-                }}
-              />
+                value={filters.status}
+                onChange={(value) => handleFilterChange('status', value)}
+              >
+                <option value="">All Status</option>
+                <option value="SUBMITTED">Submitted</option>
+                <option value="UNDER_REVIEW">Under Review</option>
+                <option value="APPROVED">Approved</option>
+                <option value="REJECTED">Rejected</option>
+              </Select>
+              <Select
+                value={filters.state}
+                onChange={(value) => handleFilterChange('state', value)}
+              >
+                <option value="">All States</option>
+                {NIGERIAN_STATES.map(state => (
+                  <option key={state} value={state}>{state}</option>
+                ))}
+              </Select>
+              <Button
+                variant="outline"
+                onClick={() => setFilters({
+                  search: '',
+                  status: '',
+                  state: '',
+                  page: 1,
+                  limit: 10
+                })}
+              >
+                Clear Filters
+              </Button>
             </div>
           </div>
-        </CardHeader>
-        <CardBody>
-          <Table
-            columns={columns}
-            data={applications}
-            keyExtractor={(item) => item.id}
-            loading={loading}
-            emptyMessage="No applications found"
-          />
-          
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex justify-center mt-4 space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(currentPage - 1)}
-                disabled={currentPage === 1}
-              >
-                Previous
+        </Card>
+      )}
+
+      {/* Table */}
+      <Card>
+        <Table
+          columns={columns}
+          data={applications}
+          loading={loading}
+          emptyMessage="No applications found"
+        />
+        
+        {/* Pagination */}
+        {pagination.pages > 1 && (
+          <div className="p-4 border-t">
+            <Pagination
+              currentPage={filters.page}
+              totalPages={pagination.pages}
+              onPageChange={(page) => handleFilterChange('page', page)}
+            />
+          </div>
+        )}
+      </Card>
+
+      {/* Bulk Actions */}
+      {selectedApplications.length > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg p-4 z-50">
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            <p className="text-sm text-gray-600">
+              {selectedApplications.length} application(s) selected
+            </p>
+            <div className="flex items-center space-x-3">
+              <Button variant="outline" onClick={() => setSelectedApplications([])}>
+                Clear Selection
               </Button>
-              <span className="px-4 py-2 text-sm">
-                Page {currentPage} of {totalPages}
-              </span>
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(currentPage + 1)}
-                disabled={currentPage === totalPages}
+                onClick={() => {
+                  // Implement bulk approve
+                  console.log('Bulk approve:', selectedApplications);
+                }}
+                className="bg-green-600 hover:bg-green-700"
               >
-                Next
+                Bulk Approve
+              </Button>
+              <Button
+                onClick={() => {
+                  // Implement bulk reject
+                  console.log('Bulk reject:', selectedApplications);
+                }}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Bulk Reject
               </Button>
             </div>
-          )}
-        </CardBody>
-      </Card>
+          </div>
+        </div>
+      )}
     </div>
   );
-};
-
-export default OnboardingList;
+}

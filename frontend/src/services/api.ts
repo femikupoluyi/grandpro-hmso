@@ -123,20 +123,32 @@ export const apiService = {
       api.get('/onboarding/applications', { params }),
     getApplicationById: (id: string) =>
       api.get(`/onboarding/applications/${id}`),
-    updateApplicationStatus: (id: string, status: string) =>
-      api.patch(`/onboarding/applications/${id}/status`, { status }),
+    getApplicationStatus: (applicationNumber: string, email?: string) => {
+      const params = email ? { email } : {};
+      return api.get(`/onboarding/applications/status/${applicationNumber}`, { params });
+    },
+    updateApplicationStatus: (id: string, data: { status: string; reason?: string }) =>
+      api.patch(`/onboarding/applications/${id}/status`, data),
     uploadDocument: (applicationId: string, formData: FormData) =>
       api.post(`/onboarding/applications/${applicationId}/documents`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       }),
-    evaluateApplication: (data: any) =>
-      api.post('/onboarding/applications/evaluate', data),
+    evaluateApplication: (applicationId: string, data: any) =>
+      api.post(`/onboarding/applications/${applicationId}/evaluate`, data),
     generateContract: (data: any) =>
       api.post('/onboarding/contracts/generate', data),
-    signContract: (data: any) =>
-      api.post('/onboarding/contracts/sign', data),
+    signContract: (contractId: string, data: any) =>
+      api.post(`/onboarding/contracts/${contractId}/sign`, data),
     getOnboardingProgress: (applicationId: string) =>
       api.get(`/onboarding/applications/${applicationId}/progress`),
+    getChecklist: (applicationId: string) =>
+      api.get(`/onboarding/applications/${applicationId}/checklist`),
+    updateChecklistItem: (id: string, data: any) =>
+      api.patch(`/onboarding/checklist/${id}`, data),
+    exportApplications: (format: string, params?: any) =>
+      api.get(`/onboarding/applications/export/${format}`, { params, responseType: 'blob' }),
+    getOnboardingMetrics: (params?: any) =>
+      api.get('/onboarding/metrics', { params }),
   },
 
   // Patient endpoints
